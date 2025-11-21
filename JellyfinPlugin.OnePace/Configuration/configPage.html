@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>One Pace Plugin</title>
+</head>
+<body>
+    <div id="OnePaceConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="OnePaceConfigForm">
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">One Pace Metadata Plugin Configuration</h2>
+                        <p>
+                            This plugin automatically fetches metadata for One Pace from the community-maintained GitHub repository.
+                            Configure the options below to customize the plugin's behavior.
+                        </p>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Caching Settings</h3>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="cacheDurationHours">Cache Duration (hours)</label>
+                            <input is="emby-input" type="number" id="cacheDurationHours" name="cacheDurationHours" min="1" max="168" step="1" />
+                            <div class="fieldDescription">
+                                How long to cache metadata before checking for updates. Default is 24 hours.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Auto-Update Settings</h3>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label>
+                                <input is="emby-checkbox" type="checkbox" id="enableAutoUpdate" name="enableAutoUpdate" />
+                                <span>Enable Auto-Update</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Automatically check for and download new metadata from the GitHub repository.
+                            </div>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="autoUpdateIntervalHours">Auto-Update Interval (hours)</label>
+                            <input is="emby-input" type="number" id="autoUpdateIntervalHours" name="autoUpdateIntervalHours" min="1" max="72" step="1" />
+                            <div class="fieldDescription">
+                                How often to check for metadata updates when auto-update is enabled. Default is 6 hours.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Episode Matching Settings</h3>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label>
+                                <input is="emby-checkbox" type="checkbox" id="preferCrc32Matching" name="preferCrc32Matching" />
+                                <span>Prefer CRC32 Matching</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                When enabled, the plugin will first try to match episodes by CRC32 checksums in the filename (e.g., [ABC12345]) before falling back to name-based matching.
+                                Recommended for official One Pace releases.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Image Settings</h3>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label>
+                                <input is="emby-checkbox" type="checkbox" id="enablePosterDownload" name="enablePosterDownload" />
+                                <span>Download Poster Images</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Automatically download and display poster artwork for One Pace arcs/seasons.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            var OnePaceConfig = {
+                pluginUniqueId: 'a7f2e6d4-8c3b-4a1f-9e5d-2b8c7a4f1e3d'
+            };
+
+            document.getElementById('OnePaceConfigPage').addEventListener('pageshow', function () {
+                Dashboard.showLoadingMsg();
+
+                ApiClient.getPluginConfiguration(OnePaceConfig.pluginUniqueId).then(function (config) {
+                    document.getElementById('cacheDurationHours').value = config.CacheDurationHours || 24;
+                    document.getElementById('enableAutoUpdate').checked = config.EnableAutoUpdate !== false;
+                    document.getElementById('autoUpdateIntervalHours').value = config.AutoUpdateIntervalHours || 6;
+                    document.getElementById('preferCrc32Matching').checked = config.PreferCrc32Matching !== false;
+                    document.getElementById('enablePosterDownload').checked = config.EnablePosterDownload !== false;
+
+                    Dashboard.hideLoadingMsg();
+                });
+            });
+
+            document.getElementById('OnePaceConfigForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                Dashboard.showLoadingMsg();
+
+                ApiClient.getPluginConfiguration(OnePaceConfig.pluginUniqueId).then(function (config) {
+                    config.CacheDurationHours = parseInt(document.getElementById('cacheDurationHours').value) || 24;
+                    config.EnableAutoUpdate = document.getElementById('enableAutoUpdate').checked;
+                    config.AutoUpdateIntervalHours = parseInt(document.getElementById('autoUpdateIntervalHours').value) || 6;
+                    config.PreferCrc32Matching = document.getElementById('preferCrc32Matching').checked;
+                    config.EnablePosterDownload = document.getElementById('enablePosterDownload').checked;
+
+                    ApiClient.updatePluginConfiguration(OnePaceConfig.pluginUniqueId, config).then(function (result) {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                    });
+                });
+
+                return false;
+            });
+        </script>
+    </div>
+</body>
+</html>
