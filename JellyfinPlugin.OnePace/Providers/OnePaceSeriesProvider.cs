@@ -19,17 +19,14 @@ namespace JellyfinPlugin.OnePace.Providers
     /// </summary>
     public class OnePaceSeriesProvider : IRemoteMetadataProvider<Series, SeriesInfo>
     {
-        private readonly OnePaceMetadataService _metadataService;
         private readonly ILogger<OnePaceSeriesProvider> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OnePaceSeriesProvider"/> class.
         /// </summary>
-        /// <param name="metadataService">Metadata service instance.</param>
         /// <param name="logger">Logger instance.</param>
-        public OnePaceSeriesProvider(OnePaceMetadataService metadataService, ILogger<OnePaceSeriesProvider> logger)
+        public OnePaceSeriesProvider(ILogger<OnePaceSeriesProvider> logger)
         {
-            _metadataService = metadataService;
             _logger = logger;
         }
 
@@ -48,7 +45,7 @@ namespace JellyfinPlugin.OnePace.Providers
                 return Enumerable.Empty<RemoteSearchResult>();
             }
 
-            var metadata = await _metadataService.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             if (metadata?.TvShow == null)
             {
                 _logger.LogWarning("Failed to fetch One Pace metadata");
@@ -81,7 +78,7 @@ namespace JellyfinPlugin.OnePace.Providers
                 return result;
             }
 
-            var metadata = await _metadataService.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             if (metadata?.TvShow == null)
             {
                 _logger.LogWarning("Failed to fetch One Pace metadata");

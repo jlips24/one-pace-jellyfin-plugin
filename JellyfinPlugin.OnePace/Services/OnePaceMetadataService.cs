@@ -20,6 +20,9 @@ namespace JellyfinPlugin.OnePace.Services
         private const string CacheFileName = "onepace-metadata-cache.json";
         private const string VersionFileName = "onepace-version.txt";
 
+        private static OnePaceMetadataService? _instance;
+        private static readonly object _instanceLock = new object();
+
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<OnePaceMetadataService> _logger;
         private readonly string _cacheDirectory;
@@ -29,12 +32,50 @@ namespace JellyfinPlugin.OnePace.Services
         private readonly SemaphoreSlim _cacheLock = new SemaphoreSlim(1, 1);
 
         /// <summary>
+        /// Gets the singleton instance of the metadata service.
+        /// </summary>
+        public static OnePaceMetadataService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_instanceLock)
+                    {
+                        if (_instance == null)
+                        {
+                            throw new InvalidOperationException("OnePaceMetadataService has not been initialized. Call Initialize() first.");
+                        }
+                    }
+                }
+                return _instance;
+            }
+        }
+
+        /// <summary>
+        /// Initializes the singleton instance.
+        /// </summary>
+        public static void Initialize(IHttpClientFactory httpClientFactory, ILogger<OnePaceMetadataService> logger, IApplicationPaths applicationPaths)
+        {
+            if (_instance == null)
+            {
+                lock (_instanceLock)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = new OnePaceMetadataService(httpClientFactory, logger, applicationPaths);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="OnePaceMetadataService"/> class.
         /// </summary>
         /// <param name="httpClientFactory">HTTP client factory.</param>
         /// <param name="logger">Logger instance.</param>
         /// <param name="applicationPaths">Application paths for cache directory.</param>
-        public OnePaceMetadataService(
+        private OnePaceMetadataService(
             IHttpClientFactory httpClientFactory,
             ILogger<OnePaceMetadataService> logger,
             IApplicationPaths applicationPaths)

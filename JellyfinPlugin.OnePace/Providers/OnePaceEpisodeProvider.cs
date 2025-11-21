@@ -21,7 +21,6 @@ namespace JellyfinPlugin.OnePace.Providers
     /// </summary>
     public class OnePaceEpisodeProvider : IRemoteMetadataProvider<Episode, EpisodeInfo>
     {
-        private readonly OnePaceMetadataService _metadataService;
         private readonly ILogger<OnePaceEpisodeProvider> _logger;
 
         // Regex to extract CRC32 from filename: matches [ABC12345] format
@@ -30,11 +29,9 @@ namespace JellyfinPlugin.OnePace.Providers
         /// <summary>
         /// Initializes a new instance of the <see cref="OnePaceEpisodeProvider"/> class.
         /// </summary>
-        /// <param name="metadataService">Metadata service instance.</param>
         /// <param name="logger">Logger instance.</param>
-        public OnePaceEpisodeProvider(OnePaceMetadataService metadataService, ILogger<OnePaceEpisodeProvider> logger)
+        public OnePaceEpisodeProvider(ILogger<OnePaceEpisodeProvider> logger)
         {
-            _metadataService = metadataService;
             _logger = logger;
         }
 
@@ -52,7 +49,7 @@ namespace JellyfinPlugin.OnePace.Providers
                 return Enumerable.Empty<RemoteSearchResult>();
             }
 
-            var metadata = await _metadataService.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             if (metadata?.Arcs == null)
             {
                 return Enumerable.Empty<RemoteSearchResult>();
@@ -89,7 +86,7 @@ namespace JellyfinPlugin.OnePace.Providers
                 return result;
             }
 
-            var metadata = await _metadataService.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             if (metadata?.Arcs == null)
             {
                 _logger.LogWarning("Failed to fetch One Pace metadata for episode");

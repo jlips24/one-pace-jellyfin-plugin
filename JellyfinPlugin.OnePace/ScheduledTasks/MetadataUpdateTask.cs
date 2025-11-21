@@ -13,17 +13,14 @@ namespace JellyfinPlugin.OnePace.ScheduledTasks
     /// </summary>
     public class MetadataUpdateTask : IScheduledTask
     {
-        private readonly OnePaceMetadataService _metadataService;
         private readonly ILogger<MetadataUpdateTask> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetadataUpdateTask"/> class.
         /// </summary>
-        /// <param name="metadataService">Metadata service instance.</param>
         /// <param name="logger">Logger instance.</param>
-        public MetadataUpdateTask(OnePaceMetadataService metadataService, ILogger<MetadataUpdateTask> logger)
+        public MetadataUpdateTask(ILogger<MetadataUpdateTask> logger)
         {
-            _metadataService = metadataService;
             _logger = logger;
         }
 
@@ -59,7 +56,7 @@ namespace JellyfinPlugin.OnePace.ScheduledTasks
                 progress?.Report(25);
 
                 // Force refresh the metadata
-                var metadata = await _metadataService.GetMetadataAsync(forceRefresh: true, cancellationToken: cancellationToken)
+                var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(forceRefresh: true, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
                 progress?.Report(75);

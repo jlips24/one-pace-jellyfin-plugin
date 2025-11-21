@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using JellyfinPlugin.OnePace.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace JellyfinPlugin.OnePace
 {
@@ -18,10 +21,20 @@ namespace JellyfinPlugin.OnePace
         /// </summary>
         /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
         /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
-        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        /// <param name="httpClientFactory">HTTP client factory.</param>
+        /// <param name="loggerFactory">Logger factory.</param>
+        public Plugin(
+            IApplicationPaths applicationPaths,
+            IXmlSerializer xmlSerializer,
+            IHttpClientFactory httpClientFactory,
+            ILoggerFactory loggerFactory)
             : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
+
+            // Initialize the metadata service singleton
+            var logger = loggerFactory.CreateLogger<OnePaceMetadataService>();
+            OnePaceMetadataService.Initialize(httpClientFactory, logger, applicationPaths);
         }
 
         /// <inheritdoc />

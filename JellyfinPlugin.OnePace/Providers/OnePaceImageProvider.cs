@@ -19,22 +19,18 @@ namespace JellyfinPlugin.OnePace.Providers
     /// </summary>
     public class OnePaceImageProvider : IRemoteImageProvider
     {
-        private readonly OnePaceMetadataService _metadataService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<OnePaceImageProvider> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OnePaceImageProvider"/> class.
         /// </summary>
-        /// <param name="metadataService">Metadata service instance.</param>
         /// <param name="httpClientFactory">HTTP client factory.</param>
         /// <param name="logger">Logger instance.</param>
         public OnePaceImageProvider(
-            OnePaceMetadataService metadataService,
             IHttpClientFactory httpClientFactory,
             ILogger<OnePaceImageProvider> logger)
         {
-            _metadataService = metadataService;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
         }
@@ -80,7 +76,7 @@ namespace JellyfinPlugin.OnePace.Providers
                 return Enumerable.Empty<RemoteImageInfo>();
             }
 
-            var metadata = await _metadataService.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             if (metadata?.Arcs == null || string.IsNullOrWhiteSpace(metadata.BaseUrl))
             {
                 _logger.LogWarning("Failed to fetch One Pace metadata for images");
