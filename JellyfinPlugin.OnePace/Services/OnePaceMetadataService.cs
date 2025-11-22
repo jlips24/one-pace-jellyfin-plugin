@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -17,6 +18,7 @@ namespace JellyfinPlugin.OnePace.Services
     {
         private const string DataUrl = "https://raw.githubusercontent.com/ladyisatis/one-pace-metadata/main/data.json";
         private const string StatusUrl = "https://raw.githubusercontent.com/ladyisatis/one-pace-metadata/main/status.json";
+        private const string EpisodeUrlTemplate = "https://raw.githubusercontent.com/ladyisatis/one-pace-metadata/main/episodes/{0}.yml";
         private const string CacheFileName = "onepace-metadata-cache.json";
         private const string VersionFileName = "onepace-version.txt";
 
@@ -30,6 +32,7 @@ namespace JellyfinPlugin.OnePace.Services
         private OnePaceData? _cachedData;
         private DateTime _lastCacheTime = DateTime.MinValue;
         private readonly SemaphoreSlim _cacheLock = new SemaphoreSlim(1, 1);
+        private readonly Dictionary<string, EpisodeDetails> _cachedEpisodeDetails = new Dictionary<string, EpisodeDetails>();
 
         /// <summary>
         /// Gets the singleton instance of the metadata service.
@@ -313,6 +316,125 @@ namespace JellyfinPlugin.OnePace.Services
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to save version info");
+            }
+        }
+
+        /// <summary>
+        /// Gets detailed episode metadata including title and description.
+        /// </summary>
+        /// <param name="crc32">The CRC32 checksum of the episode.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Episode details or null if not found.</returns>
+        public async Task<EpisodeDetails?> GetEpisodeDetailsAsync(string crc32, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(crc32))
+            {
+                return null;
+            }
+
+            // Check cache first
+            if (_cachedEpisodeDetails.TryGetValue(crc32, out var cached))
+            {
+                return cached;
+            }
+
+            try
+            {
+                var url = string.Format(EpisodeUrlTemplate, crc32.ToUpperInvariant());
+                var httpClient = _httpClientFactory.CreateClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+                _logger.LogDebug("Fetching episode details for CRC32: {CRC32}", crc32);
+
+                var response = await httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogDebug("Episode details not found for CRC32: {CRC32}", crc32);
+                    return null;
+                }
+
+                var yamlContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                // Parse YAML to JSON (simple approach for this structure)
+                var details = ParseEpisodeYaml(yamlContent);
+
+                if (details != null)
+                {
+                    _cachedEpisodeDetails[crc32] = details;
+                    _logger.LogInformation("Fetched episode details: {Title}", details.Title);
+                }
+
+                return details;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch episode details for CRC32: {CRC32}", crc32);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Parses episode YAML content to EpisodeDetails object.
+        /// </summary>
+        private EpisodeDetails? ParseEpisodeYaml(string yamlContent)
+        {
+            try
+            {
+                var details = new EpisodeDetails();
+
+                foreach (var line in yamlContent.Split('\n'))
+                {
+                    var trimmed = line.Trim();
+                    if (trimmed.StartsWith('#') || string.IsNullOrWhiteSpace(trimmed))
+                    {
+                        continue;
+                    }
+
+                    var colonIndex = trimmed.IndexOf(':');
+                    if (colonIndex <= 0)
+                    {
+                        continue;
+                    }
+
+                    var key = trimmed.Substring(0, colonIndex).Trim();
+                    var value = trimmed.Substring(colonIndex + 1).Trim().Trim('"', '\'');
+
+                    switch (key)
+                    {
+                        case "arc":
+                            if (int.TryParse(value, out var arc)) details.Arc = arc;
+                            break;
+                        case "episode":
+                            if (int.TryParse(value, out var episode)) details.EpisodeNumber = episode;
+                            break;
+                        case "title":
+                            details.Title = value;
+                            break;
+                        case "originaltitle":
+                            details.OriginalTitle = value;
+                            break;
+                        case "description":
+                            details.Description = value;
+                            break;
+                        case "chapters":
+                            details.Chapters = value;
+                            break;
+                        case "episodes":
+                            details.AnimeEpisodes = value;
+                            break;
+                        case "released":
+                            details.Released = value;
+                            break;
+                    }
+                }
+
+                return string.IsNullOrWhiteSpace(details.Title) ? null : details;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse episode YAML");
+                return null;
             }
         }
     }

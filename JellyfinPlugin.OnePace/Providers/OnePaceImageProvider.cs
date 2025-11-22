@@ -41,7 +41,13 @@ namespace JellyfinPlugin.OnePace.Providers
         /// <inheritdoc />
         public bool Supports(BaseItem item)
         {
-            // Support Season entities (arcs) for One Pace
+            // Support Series and Season entities for One Pace
+            if (item is Series series)
+            {
+                var normalized = series.Name?.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty) ?? string.Empty;
+                return normalized.Contains("onepace");
+            }
+
             if (item is Season season)
             {
                 var seriesName = season.SeriesName ?? string.Empty;
@@ -55,7 +61,7 @@ namespace JellyfinPlugin.OnePace.Providers
         /// <inheritdoc />
         public IEnumerable<ImageType> GetSupportedImages(BaseItem item)
         {
-            // Only provide Primary (poster) images for seasons
+            // Provide Primary (poster) images for both series and seasons
             return new[] { ImageType.Primary };
         }
 
@@ -71,15 +77,53 @@ namespace JellyfinPlugin.OnePace.Providers
                 return Enumerable.Empty<RemoteImageInfo>();
             }
 
-            if (item is not Season season)
+            // Handle Series (show) posters
+            if (item is Series)
             {
-                return Enumerable.Empty<RemoteImageInfo>();
+                return GetSeriesImages();
             }
 
-            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (metadata?.Arcs == null || string.IsNullOrWhiteSpace(metadata.BaseUrl))
+            // Handle Season (arc) posters
+            if (item is Season season)
             {
-                _logger.LogWarning("Failed to fetch One Pace metadata for images");
+                return await GetSeasonImagesAsync(season, cancellationToken).ConfigureAwait(false);
+            }
+
+            return Enumerable.Empty<RemoteImageInfo>();
+        }
+
+        /// <summary>
+        /// Gets series-level poster images from SpykerNZ repository.
+        /// </summary>
+        private IEnumerable<RemoteImageInfo> GetSeriesImages()
+        {
+            const string BaseUrl = "https://raw.githubusercontent.com/SpykerNZ/one-pace-for-plex/main/One%20Pace";
+
+            _logger.LogInformation("Providing One Pace series poster from SpykerNZ repository");
+
+            return new[]
+            {
+                new RemoteImageInfo
+                {
+                    Url = $"{BaseUrl}/poster.png",
+                    Type = ImageType.Primary,
+                    ProviderName = Name
+                }
+            };
+        }
+
+        /// <summary>
+        /// Gets season-level poster images from SpykerNZ repository.
+        /// </summary>
+        private async Task<IEnumerable<RemoteImageInfo>> GetSeasonImagesAsync(Season season, CancellationToken cancellationToken)
+        {
+            const string BaseUrl = "https://raw.githubusercontent.com/SpykerNZ/one-pace-for-plex/main/One%20Pace";
+
+            // Need to get season number from metadata
+            var metadata = await OnePaceMetadataService.Instance.GetMetadataAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (metadata?.Arcs == null)
+            {
+                _logger.LogWarning("Failed to fetch One Pace metadata for season images");
                 return Enumerable.Empty<RemoteImageInfo>();
             }
 
@@ -104,17 +148,20 @@ namespace JellyfinPlugin.OnePace.Providers
                 return Enumerable.Empty<RemoteImageInfo>();
             }
 
-            // Check if poster is available
-            if (string.IsNullOrWhiteSpace(arc.Poster))
+            // Construct SpykerNZ poster URL
+            string posterUrl;
+            if (arc.Part == 0)
             {
-                _logger.LogDebug("No poster available for arc: {Arc}", arc.Title);
-                return Enumerable.Empty<RemoteImageInfo>();
+                // Specials season
+                posterUrl = $"{BaseUrl}/season-specials-poster.png";
+            }
+            else
+            {
+                // Regular season (01-36)
+                posterUrl = $"{BaseUrl}/season{arc.Part:D2}-poster.png";
             }
 
-            // Construct full poster URL
-            var posterUrl = $"{metadata.BaseUrl.TrimEnd('/')}/{arc.Poster.TrimStart('/')}";
-
-            _logger.LogInformation("Found poster for arc {Arc}: {Url}", arc.Title, posterUrl);
+            _logger.LogInformation("Found poster for arc {Arc} (Part {Part}): {Url}", arc.Title, arc.Part, posterUrl);
 
             return new[]
             {

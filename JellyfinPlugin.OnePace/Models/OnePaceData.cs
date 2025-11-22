@@ -198,6 +198,36 @@ namespace JellyfinPlugin.OnePace.Models
     }
 
     /// <summary>
+    /// Represents detailed episode metadata from YAML files.
+    /// </summary>
+    public class EpisodeDetails
+    {
+        [JsonPropertyName("arc")]
+        public int Arc { get; set; }
+
+        [JsonPropertyName("episode")]
+        public int EpisodeNumber { get; set; }
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = string.Empty;
+
+        [JsonPropertyName("originaltitle")]
+        public string OriginalTitle { get; set; } = string.Empty;
+
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("chapters")]
+        public string Chapters { get; set; } = string.Empty;
+
+        [JsonPropertyName("episodes")]
+        public string AnimeEpisodes { get; set; } = string.Empty;
+
+        [JsonPropertyName("released")]
+        public string Released { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     /// Represents version status from status.json.
     /// </summary>
     public class MetadataStatus

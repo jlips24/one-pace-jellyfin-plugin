@@ -12,6 +12,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
+using OnePaceModels = JellyfinPlugin.OnePace.Models;
 
 namespace JellyfinPlugin.OnePace.Providers
 {
@@ -102,13 +103,29 @@ namespace JellyfinPlugin.OnePace.Providers
 
             var (arc, episodeNumber, episodeData) = match.Value;
 
+            // Try to fetch detailed episode information
+            OnePaceModels.EpisodeDetails? episodeDetails = null;
+            if (!string.IsNullOrWhiteSpace(episodeData.Crc32))
+            {
+                episodeDetails = await OnePaceMetadataService.Instance.GetEpisodeDetailsAsync(episodeData.Crc32, cancellationToken).ConfigureAwait(false);
+            }
+
             var episode = new Episode
             {
-                Name = $"{arc.Title} - Episode {episodeNumber}",
+                Name = episodeDetails?.Title ?? $"{arc.Title} - Episode {episodeNumber}",
                 IndexNumber = int.Parse(episodeNumber),
                 ParentIndexNumber = arc.Part,
-                Overview = arc.Description // Use arc description since episodes don't have individual descriptions
+                Overview = episodeDetails?.Description ?? arc.Description
             };
+
+            // Add premiere date if available
+            if (episodeDetails != null)
+            {
+                if (!string.IsNullOrWhiteSpace(episodeDetails.Released) && DateTime.TryParse(episodeDetails.Released, out var releaseDate))
+                {
+                    episode.PremiereDate = releaseDate;
+                }
+            }
 
             // Parse runtime if available
             if (!string.IsNullOrWhiteSpace(episodeData.Length))
@@ -124,17 +141,17 @@ namespace JellyfinPlugin.OnePace.Providers
             result.HasMetadata = true;
             result.Provider = Name;
 
-            _logger.LogInformation("Successfully provided metadata for One Pace episode: {Arc} - {Episode}",
-                arc.Title, episodeNumber);
+            _logger.LogInformation("Successfully provided metadata for One Pace episode: {Title}",
+                episode.Name);
             return result;
         }
 
         /// <summary>
         /// Finds a matching episode using hybrid matching strategy.
         /// </summary>
-        private Task<(Models.Arc arc, string episodeNumber, Models.Episode episode)?> FindEpisodeMatch(
+        private Task<(OnePaceModels.Arc arc, string episodeNumber, OnePaceModels.Episode episode)?> FindEpisodeMatch(
             EpisodeInfo info,
-            Models.OnePaceData metadata)
+            OnePaceModels.OnePaceData metadata)
         {
             var config = Plugin.Instance?.Configuration;
             var preferCrc32 = config?.PreferCrc32Matching ?? true;
@@ -211,9 +228,9 @@ namespace JellyfinPlugin.OnePace.Providers
         /// <summary>
         /// Finds episode by CRC32 checksum.
         /// </summary>
-        private (Models.Arc arc, string episodeNumber, Models.Episode episode)? FindByCrc32(
+        private (OnePaceModels.Arc arc, string episodeNumber, OnePaceModels.Episode episode)? FindByCrc32(
             string crc32,
-            List<Models.Arc> arcs)
+            List<OnePaceModels.Arc> arcs)
         {
             foreach (var arc in arcs)
             {
@@ -236,10 +253,10 @@ namespace JellyfinPlugin.OnePace.Providers
         /// <summary>
         /// Finds episode by season (arc part) and episode number.
         /// </summary>
-        private (Models.Arc arc, string episodeNumber, Models.Episode episode)? FindBySeasonEpisode(
+        private (OnePaceModels.Arc arc, string episodeNumber, OnePaceModels.Episode episode)? FindBySeasonEpisode(
             int seasonNumber,
             int episodeNumber,
-            List<Models.Arc> arcs)
+            List<OnePaceModels.Arc> arcs)
         {
             // Find arc by part number (season number)
             var arc = arcs.FirstOrDefault(a => a.Part == seasonNumber);
@@ -268,10 +285,10 @@ namespace JellyfinPlugin.OnePace.Providers
         /// <summary>
         /// Finds episode by analyzing the path structure (folder names).
         /// </summary>
-        private (Models.Arc arc, string episodeNumber, Models.Episode episode)? FindByPathStructure(
+        private (OnePaceModels.Arc arc, string episodeNumber, OnePaceModels.Episode episode)? FindByPathStructure(
             string path,
             int? episodeNumber,
-            List<Models.Arc> arcs)
+            List<OnePaceModels.Arc> arcs)
         {
             if (!episodeNumber.HasValue)
             {
