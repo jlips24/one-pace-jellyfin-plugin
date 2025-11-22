@@ -54,12 +54,14 @@ namespace JellyfinPlugin.OnePace.Providers
 
             var result = new RemoteSearchResult
             {
-                Name = metadata.TvShow.Title,
+                Name = "One Pace",
                 PremiereDate = ParseDate(metadata.TvShow.Premiered),
                 ProductionYear = int.TryParse(metadata.TvShow.Year, out var year) ? year : null,
                 SearchProviderName = Name,
                 Overview = metadata.TvShow.Plot
             };
+
+            result.SetProviderId(Name, "onepace");
 
             return new[] { result };
         }
@@ -88,7 +90,7 @@ namespace JellyfinPlugin.OnePace.Providers
             var tvShow = metadata.TvShow;
             var series = new Series
             {
-                Name = tvShow.Title,
+                Name = "One Pace",
                 OriginalTitle = tvShow.OriginalTitle,
                 SortName = tvShow.SortTitle,
                 Overview = tvShow.Plot,
@@ -104,6 +106,9 @@ namespace JellyfinPlugin.OnePace.Providers
             {
                 series.AddGenre(genre);
             }
+
+            // Set provider ID
+            series.SetProviderId(Name, "onepace");
 
             result.Item = series;
             result.HasMetadata = true;

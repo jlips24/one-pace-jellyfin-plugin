@@ -44,15 +44,29 @@ namespace JellyfinPlugin.OnePace.Providers
             // Support Series and Season entities for One Pace
             if (item is Series series)
             {
+                // Check if this series has our provider ID
+                if (series.ProviderIds != null && series.ProviderIds.ContainsKey(Name))
+                {
+                    return true;
+                }
+
+                // Fallback to name matching
                 var normalized = series.Name?.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty) ?? string.Empty;
-                return normalized.Contains("onepace");
+                return normalized.Contains("onepace") || normalized.Contains("onepiece");
             }
 
             if (item is Season season)
             {
+                // Check if the parent series has our provider ID
+                if (season.Series?.ProviderIds != null && season.Series.ProviderIds.ContainsKey(Name))
+                {
+                    return true;
+                }
+
+                // Fallback to name matching
                 var seriesName = season.SeriesName ?? string.Empty;
                 var normalized = seriesName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
-                return normalized.Contains("onepace");
+                return normalized.Contains("onepace") || normalized.Contains("onepiece");
             }
 
             return false;

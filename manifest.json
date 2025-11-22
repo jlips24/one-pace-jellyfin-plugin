@@ -12,7 +12,7 @@
         "changelog": "Initial release with series, season, episode metadata providers, poster images, hybrid matching, individual episode titles and descriptions, and auto-updates",
         "targetAbi": "10.8.0.0",
         "sourceUrl": "https://github.com/jlips24/one-pace-jellyfin-plugin/releases/download/v1.0.0/onepace_1.0.0.0.zip",
-        "checksum": "7023d3b7dbba45feeade2e00f2c66f5b",
+        "checksum": "b80c7ef62f96cce313b38368259337da",
         "timestamp": "2025-01-21T00:00:00Z"
       }
     ]
